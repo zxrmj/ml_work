@@ -53,14 +53,17 @@ class ANN
 public:
 	ANN();
 	~ANN();
-	void train();
-	void predict();
+	void SetTrainData(Mat<double> samples, Mat<double> responses);
+	void SetStudyRate(double scale = 0.1);
+	void Train();
+	void Perdict();
 private:
 	void init_weights();
 	void forward();
 	void backward();
 	
-
+	Mat<double> samples;
+	Mat<double> responses;
 	vector<Mat<double>> weights; // 容器每元素为一层，矩阵行为单元，列是对应权值
 	Mat<double> outputs;
 	vector<Mat<double>> delta_weights;
