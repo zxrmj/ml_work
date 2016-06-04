@@ -41,7 +41,7 @@ class Mat
 {
 public:
 	Mat();
-	Mat(size_t row, size_t col);
+	Mat(size_t rows, size_t cols);
 	Mat(initializer_list<_Ty> list);
 	~Mat();
 	Mat<_Ty>&  operator=(const Mat<_Ty> &mat);
@@ -50,8 +50,8 @@ public:
 	_Ty* begin();
 	_Ty* end();
 	void fill(const _Ty &val);
-	size_t row;
-	size_t col;
+	size_t rows;
+	size_t cols;
 	shared_ptr<Pointer<_Ty>> ptr = make_shared<Pointer<_Ty>>();
 };
 
@@ -62,19 +62,19 @@ inline Mat<_Ty>::Mat() :Mat(0, 0)
 }
 
 template<class _Ty>
-inline Mat<_Ty>::Mat(size_t row, size_t col)
+inline Mat<_Ty>::Mat(size_t rows, size_t cols)
 {
-	this->row = row;
-	this->col = col;
-	ptr->_base = new _Ty[row*col];
+	this->rows = rows;
+	this->cols = cols;
+	ptr->_base = new _Ty[rows*cols];
 	
 }
 template<class _Ty>
 inline Mat<_Ty>::Mat(initializer_list<_Ty> lst)
 {
-	this->col = lst.size();
-	this->row = 1;
-	ptr->_base = new _Ty[col];
+	this->cols = lst.size();
+	this->rows = 1;
+	ptr->_base = new _Ty[cols];
 	for (size_t i = 0; i < lst.size(); i++)
 		*(ptr->_base + i) = *(lst.begin() + i);
 }
@@ -87,15 +87,15 @@ inline Mat<_Ty>& Mat<_Ty>::operator=(const Mat<_Ty>& mat)
 {
 	if (this == &mat)
 		return *this;
-	this->col = mat.col;
-	this->row = mat.row;
+	this->cols = mat.cols;
+	this->rows = mat.rows;
 	this->ptr = mat.ptr;
 	return *this;
 }
 template<class _Ty>
 inline _Ty & Mat<_Ty>::at(size_t x, size_t y)
 {
-	return *(ptr->_base + y*col + x);
+	return *(ptr->_base + y*cols + x);
 }
 template<class _Ty>
 inline _Ty & Mat<_Ty>::operator[](int i)
@@ -110,12 +110,12 @@ inline _Ty * Mat<_Ty>::begin()
 template<class _Ty>
 inline _Ty * Mat<_Ty>::end()
 {
-	return this->ptr->_base + row*col;
+	return this->ptr->_base + rows*cols;
 }
 template<class _Ty>
 inline void Mat<_Ty>::fill(const _Ty &val)
 {
-	std::fill_n(ptr->_base, row*col, val);
+	std::fill_n(ptr->_base, rows*cols, val);
 }
 // ¾ØÕóÀà½áÊø
 
