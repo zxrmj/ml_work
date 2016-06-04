@@ -1,5 +1,5 @@
 #include "ann.h"
-#include <memory>
+
 int main()
 {
 	/*Mat<int> mat = Mat<int>({ 2,3,4,6,1 });

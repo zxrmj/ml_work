@@ -7,10 +7,34 @@
 #include <random>
 #include <functional>
 #include <initializer_list>
+#include <memory>
 using namespace std;
 /*
  
  */
+template<class _Ty>
+class Pointer
+{
+public:
+	Pointer();
+	~Pointer();
+	_Ty* _base;
+};
+template<class _Ty>
+inline Pointer<_Ty>::Pointer()
+{
+	_base = nullptr;
+}
+
+template<class _Ty>
+inline Pointer<_Ty>::~Pointer()
+{
+	if (_base == nullptr)
+		return;
+	delete[] _base;
+}
+
+
  // ¾ØÕó
 template<class _Ty>
 class Mat
@@ -20,6 +44,7 @@ public:
 	Mat(size_t row, size_t col);
 	Mat(initializer_list<_Ty> list);
 	~Mat();
+	Mat<_Ty>&  operator=(const Mat<_Ty> &mat);
 	_Ty& at(size_t x, size_t y = 0);
 	_Ty& operator[](int);
 	_Ty* begin();
@@ -27,11 +52,9 @@ public:
 	void fill(const _Ty &val);
 	size_t row;
 	size_t col;
-	
-private:
-	_Ty* _db;
-
+	shared_ptr<Pointer<_Ty>> ptr = make_shared<Pointer<_Ty>>();
 };
+
 
 template<class _Ty>
 inline Mat<_Ty>::Mat() :Mat(0, 0)
@@ -43,26 +66,36 @@ inline Mat<_Ty>::Mat(size_t row, size_t col)
 {
 	this->row = row;
 	this->col = col;
-	_db = new _Ty[row*col];
+	ptr->_base = new _Ty[row*col];
+	
 }
 template<class _Ty>
 inline Mat<_Ty>::Mat(initializer_list<_Ty> lst)
 {
 	this->col = lst.size();
 	this->row = 1;
-	_db = new _Ty[col];
+	ptr->_base = new _Ty[col];
 	for (size_t i = 0; i < lst.size(); i++)
-		*(_db + i) = *(lst.begin() + i);
+		*(ptr->_base + i) = *(lst.begin() + i);
 }
 template<class _Ty>
 inline Mat<_Ty>::~Mat()
 {
-	delete _db;
+}
+template<class _Ty>
+inline Mat<_Ty>& Mat<_Ty>::operator=(const Mat<_Ty>& mat)
+{
+	if (this == &mat)
+		return *this;
+	this->col = mat.col;
+	this->row = mat.row;
+	this->ptr = mat.ptr;
+	return *this;
 }
 template<class _Ty>
 inline _Ty & Mat<_Ty>::at(size_t x, size_t y)
 {
-	return *(_db + y*col + x);
+	return *(ptr->_base + y*col + x);
 }
 template<class _Ty>
 inline _Ty & Mat<_Ty>::operator[](int i)
@@ -72,17 +105,17 @@ inline _Ty & Mat<_Ty>::operator[](int i)
 template<class _Ty>
 inline _Ty * Mat<_Ty>::begin()
 {
-	return this->_db;
+	return this->ptr->_base;
 }
 template<class _Ty>
 inline _Ty * Mat<_Ty>::end()
 {
-	return this->_db + row*col;
+	return this->ptr->_base + row*col;
 }
 template<class _Ty>
 inline void Mat<_Ty>::fill(const _Ty &val)
 {
-	std::fill_n(_db, row*col, val);
+	std::fill_n(ptr->_base, row*col, val);
 }
 // ¾ØÕóÀà½áÊø
 
@@ -115,3 +148,5 @@ private:
 	double eta;
 
 };
+
+
