@@ -1,24 +1,72 @@
 #include "ann.h"
-using namespace std;
+#include <memory>
 int main()
 {
-	Mat<int> mat(3, 2);
-	mat.fill(3);
-	for (int i = 0; i < mat.row; i++)
+	/*Mat<int> mat = Mat<int>({ 2,3,4,6,1 });
+	for (size_t i = 0; i < mat.row; i++)
 	{
-		for (int j = 0; j < mat.col; j++)
+		for (size_t j = 0; j < mat.col; j++)
 		{
-			mat.at(j, i) = i + j;
 			cout << mat.at(j, i) << endl;
 		}
-	}
+	}*/
+	shared_ptr<ANN> Network = make_shared<ANN>();
+	Network->SetLayers(Mat<int>{4, 3, 3, 8});
 	system("pause");
 }
 
 ANN::ANN()
 {
+	theta = 1.0;
+	eta = 0.1;
 }
 
 ANN::~ANN()
 {
+	
+}
+
+void ANN::SetLayers(Mat<int> layers)
+{
+	assert(layers.row == 1 && layers.col > 2);
+	function<int(void)> findmax = [&layers]() -> int {
+		int max = INT_MIN;
+		for (size_t i = 0; i < layers.col; i++)
+		{
+			if (layers[i] > max)
+				max = layers[i];
+		}
+		return max;
+	};
+	outputs = Mat<double>(layers.col, findmax());
+	weights.clear();
+	weights.push_back(Mat<double>());
+	delta_weights.clear();
+	delta_weights.push_back(Mat<double>());
+	for (int l = 1; l < layers.col; l++)
+	{
+		Mat<double> w(layers[l], layers[l - 1]); // 每行一个单元所有权值。每列一个权值
+		Mat<double> dw(layers[l], layers[l - 1]); // 每行一个单元所有更新权值。每列一个权值
+		weights.push_back(w);
+		delta_weights.push_back(dw);
+	}
+
+	init_weights();
+}
+
+void ANN::init_weights()
+{
+	mt19937 gen;
+	uniform_real_distribution<> urd(0,0.1);
+	auto random = bind(urd, gen);
+	for (size_t l = 1; l < weights.size(); l++)
+	{
+		for (size_t i = 0; i < weights[l].row; i++)
+		{
+			for (size_t j = 0; j < weights[l].col; j++)
+			{
+				weights[l].at(j, i) = random();
+			}
+		}
+	}
 }
