@@ -9,9 +9,7 @@
 #include <initializer_list>
 #include <memory>
 using namespace std;
-/*
- 
- */
+/*管理矩阵类内存*/
 template<class _Ty>
 class Pointer
 {
@@ -35,7 +33,7 @@ inline Pointer<_Ty>::~Pointer()
 }
 
 
- // 矩阵
+/*存储数据的矩阵*/
 template<class _Ty>
 class Mat
 {
@@ -132,7 +130,7 @@ public:
 	void SetTermIterations(int iterations = 5000);
 	void SetTermErrorRate(double error = 0.01);
 	void Train();
-	void Perdict(Mat<double> sample,Mat<double> response);
+	void Predict(Mat<double>& sample,Mat<double>& response);
 private:
 	void init_weights();
 	void forward();
@@ -146,6 +144,8 @@ private:
 
 	double theta;
 	double eta;
+	double max_iter;
+	double max_error;
 
 };
 
