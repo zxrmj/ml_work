@@ -11,6 +11,9 @@
 #include <initializer_list>
 #include <memory>
 #include <regex>
+#include <boost\property_tree\ptree.hpp>
+#include <boost\property_tree\xml_parser.hpp>
+using namespace boost::property_tree;
 using namespace std;
 /*管理矩阵类内存*/
 template<class _Ty>
@@ -174,6 +177,7 @@ public:
 	void SetTermErrorRate(double error = 0.01);
 	void Train();
 	void Predict(Mat<double>& sample,Mat<double>& response);
+	void Save(string path);
 private:
 	void init_weights();
 	void forward();

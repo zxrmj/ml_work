@@ -101,7 +101,7 @@ int main()
 		[](Mat<double> &mat) -> int 
 	{
 		double max = FLT_MIN;
-		double maxidx = 0;
+		int maxidx = 0;
 		for (int i = 0; i < mat.cols; i++)
 		{
 			if (mat[i] > max)
@@ -117,7 +117,7 @@ int main()
 		Mat<double> td = test[i];
 		Mat<double> rlt;
 		Network->Predict(td, rlt);
-		cout << "样本 " << i+1 << endl;
+		/*cout << "样本 " << i+1 << endl;
 		cout << "预测结果" << rlt <<  "\t真实结果" << test_results[i] << endl;
 		if (max_idx(rlt) == max_idx(test_results[i]))
 		{
@@ -128,9 +128,10 @@ int main()
 		{
 			cout << "预测失败。" << endl;
 		}
-		system("pause");
+		system("pause");*/
 	}
 	cout << "成功率:" << success * 100.0/test.size() << "%"  << endl;
+	Network->Save("test.xml");
 	system("pause");
 }
 
@@ -138,7 +139,7 @@ ANN::ANN()
 {
 	theta = 1.0;
 	eta = 0.1;
-	max_iter = 100000;
+	max_iter = 5000;
 	max_error = 0.000001;
 }
 
@@ -162,9 +163,9 @@ void ANN::SetLayers(Mat<int> layers)
 	outputs = Mat<double>(layers.cols, findmax());
 	outputs.fill(0);
 	weights.clear();
-	weights.push_back(Mat<double>());
+	weights.push_back(Mat<double>(layers[0],1));
 	delta_weights.clear();
-	delta_weights.push_back(Mat<double>());
+	delta_weights.push_back(Mat<double>(layers[0], 1));
 	for (int l = 1; l < layers.cols; l++)
 	{
 		Mat<double> w(layers[l], layers[l - 1]); // 每行一个单元所有权值。每列一个权值
@@ -267,11 +268,40 @@ void ANN::Predict(Mat<double>& sample, Mat<double>& response)
 	}
 }
 
+void ANN::Save(string path)
+{
+	ptree net, config, layer, weights_value;
+	config.add("theta", theta);
+	config.add("eta", eta);
+	config.add("max_iter", max_iter);
+	config.add("max_error", max_error);
+	layer.add("layer_num", weights.size());
+	for (int l = 0; l < weights.size(); l++)
+	{
+		layer.add("unit_num.value", weights[l].rows);
+		ptree mat_value;
+		for (int i = 1; i < weights[l].rows; i++)
+		{
+			ptree row;
+			for (int j = 0; j < weights[l].cols; j++)
+			{
+				row.add("weight", weights[l].at(j, i));
+			}
+			mat_value.add_child("unit", row);
+		}
+		weights_value.add_child("layer", mat_value);
+	}
+	net.add_child("network.config", config);
+	net.add_child("network.layer_info", layer);
+	net.add_child("network.weights", weights_value);
+	write_xml(path, net);
+}
+
 void ANN::init_weights()
 {
 	mt19937 gen;
 	uniform_real_distribution<> urd(0,0.1);
-	auto random = bind(urd, gen);
+	_Binder<_Unforced, uniform_real_distribution<>&, mt19937&> random = bind(urd, gen);
 	for (size_t l = 1; l < weights.size(); l++)
 	{
 		for (size_t i = 0; i < weights[l].rows; i++)
@@ -309,7 +339,6 @@ void ANN::backward(int &idx)
 	int output_layer = outputs.rows - 1;
 	for (int j = 0; j < weights[output_layer].rows; j++)
 	{
-		//double delta_weight = (response[i] - layers[outputIdx][i].Result) * layers[outputIdx][i].Result * (1 - layers[outputIdx][i].Result);
 		double &result_j = outputs.at(j, output_layer);
 		double delta_weight = (responses.at(j,idx) - result_j) * result_j *(1 - outputs.at(j, output_layer));
 		for (int k = 0; k < weights[output_layer].cols; k++)
