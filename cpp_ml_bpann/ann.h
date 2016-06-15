@@ -1,5 +1,7 @@
 #pragma once
 #include <iostream>
+#include <fstream>
+#include <string>
 #include <map>
 #include <vector>
 #include <algorithm>
@@ -8,6 +10,7 @@
 #include <functional>
 #include <initializer_list>
 #include <memory>
+#include <regex>
 using namespace std;
 /*管理矩阵类内存*/
 template<class _Ty>
@@ -43,6 +46,8 @@ public:
 	Mat(initializer_list<_Ty> list);
 	~Mat();
 	Mat<_Ty>&  operator=(const Mat<_Ty> &mat);
+	bool operator==(Mat<_Ty> &mat);
+	bool operator!=(Mat<_Ty> &mat);
 	_Ty& at(size_t x, size_t y = 0);
 	_Ty& operator[](int);
 	_Ty* begin();
@@ -53,7 +58,22 @@ public:
 	shared_ptr<Pointer<_Ty>> ptr = make_shared<Pointer<_Ty>>();
 };
 
-
+template<typename _Tn>
+inline ostream& operator << (ostream &os, Mat<_Tn> &m)
+{
+	os << "[";
+	for (int i = 0; i < m.rows; i++)
+	{
+		for (int j = 0; j < m.cols; j++)
+		{
+			os << m.at(j, i) << ',';
+		}
+		if(i < m.rows-1)
+			os << endl;
+	}
+	os << "]";
+	return os;
+}
 template<class _Ty>
 inline Mat<_Ty>::Mat() :Mat(0, 0)
 {
@@ -89,6 +109,29 @@ inline Mat<_Ty>& Mat<_Ty>::operator=(const Mat<_Ty>& mat)
 	this->rows = mat.rows;
 	this->ptr = mat.ptr;
 	return *this;
+}
+template<class _Ty>
+inline bool Mat<_Ty>::operator==(Mat<_Ty>& mat)
+{
+	if (rows != mat.rows || cols != mat.cols)
+		return false;
+	else
+	{
+		for (int i = 0; i < rows; i++)
+		{
+			for (int j = 0; j < cols; j++)
+			{
+				if (this->at(j, i) != mat.at(j, i))
+					return false;
+			}
+		}
+		return true;
+	}
+}
+template<class _Ty>
+inline bool Mat<_Ty>::operator!=(Mat<_Ty>& mat)
+{
+	return !(this == mat);
 }
 template<class _Ty>
 inline _Ty & Mat<_Ty>::at(size_t x, size_t y)
@@ -134,10 +177,11 @@ public:
 private:
 	void init_weights();
 	void forward();
-	void backward();
-	
+	void backward(int &idx);
+	void normalize();
 	Mat<double> samples;
 	Mat<double> responses;
+	Mat<double> min_and_max;
 	vector<Mat<double>> weights; // 容器每元素为一层，矩阵行为单元，列是对应权值
 	Mat<double> outputs;
 	vector<Mat<double>> delta_weights;
