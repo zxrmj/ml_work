@@ -11,6 +11,7 @@
 #include <initializer_list>
 #include <memory>
 #include <regex>
+#include <io.h>
 #include <boost\property_tree\ptree.hpp>
 #include <boost\property_tree\xml_parser.hpp>
 using namespace boost::property_tree;
@@ -178,6 +179,7 @@ public:
 	void Train();
 	void Predict(Mat<double>& sample,Mat<double>& response);
 	void Save(string path);
+	void Load(string path);
 private:
 	void init_weights();
 	void forward();

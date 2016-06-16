@@ -276,11 +276,11 @@ void ANN::Save(string path)
 	config.add("max_iter", max_iter);
 	config.add("max_error", max_error);
 	layer.add("layer_num", weights.size());
-	for (int l = 0; l < weights.size(); l++)
+	for (int l = 1; l < weights.size(); l++)
 	{
 		layer.add("unit_num.value", weights[l].rows);
 		ptree mat_value;
-		for (int i = 1; i < weights[l].rows; i++)
+		for (int i = 0; i < weights[l].rows; i++)
 		{
 			ptree row;
 			for (int j = 0; j < weights[l].cols; j++)
@@ -295,6 +295,51 @@ void ANN::Save(string path)
 	net.add_child("network.layer_info", layer);
 	net.add_child("network.weights", weights_value);
 	write_xml(path, net);
+}
+
+void ANN::Load(string path)
+{
+	ptree net, config, layer, weights_value;
+	if (_access(path.c_str(), 0) == -1)
+	{
+		cerr << "配置文件不存在" << endl;
+		return;
+	}
+	read_xml(path, net);
+	net.get_child("network.config", config);
+	net.get_child("network.layer_info", layer);
+	net.get_child("network.weights", weights_value);
+	// 获取配置
+	this->theta = config.get_child("theta").get_value<double>();
+	this->eta = config.get_child("eta").get_value<double>();
+	this->max_iter = config.get_child("max_iter").get_value<double>();
+	this->max_error = config.get_child("max_error").get_value<double>();
+	// 获取层数
+	int lyr_num = layer.get_child("layer_num").get_value<int>();
+	// 获取层信息
+	Mat<int> m_lyr(1, lyr_num);
+	auto lyr_info = layer.get_child("unit_num");
+	int i = 0;
+	for (auto iter = lyr_info.begin();iter != lyr_info.end();iter++)
+	{
+		m_lyr[i++] = iter->second.get_value<int>();
+	}
+	// 加载网络层
+	this->SetLayers(m_lyr);
+	// 加载权值
+	int l = 1;
+	for (auto lyr = weights_value.begin(); lyr != weights_value.end(); lyr++)
+	{
+		i = 0;
+		for (auto unit = lyr->second.begin(); unit != lyr->second.end(); unit++)
+		{
+			int j = 0;
+			for (auto wt = unit->second.begin(); wt != unit->second.end(); wt++)
+			{
+				weights[l].at(j,i) = wt->second.get_value<double>();
+			}
+		}
+	}
 }
 
 void ANN::init_weights()
