@@ -12,10 +12,13 @@
 #include <memory>
 #include <regex>
 #include <io.h>
+#include <Windows.h>
 #include <boost\property_tree\ptree.hpp>
 #include <boost\property_tree\xml_parser.hpp>
+#include <boost\progress.hpp>
 using namespace boost::property_tree;
 using namespace std;
+
 /*管理矩阵类内存*/
 template<class _Ty>
 class Pointer
@@ -70,7 +73,7 @@ inline ostream& operator << (ostream &os, Mat<_Tn> &m)
 	{
 		for (int j = 0; j < m.cols; j++)
 		{
-			os << m.at(j, i) << ',';
+			os << m.at(j, i) << ", ";
 		}
 		if(i < m.rows-1)
 			os << endl;
@@ -169,7 +172,7 @@ class ANN
 {
 public:
 	ANN();
-	~ANN();
+	~ANN() = default;
 	void SetLayers(Mat<int> layers);
 	void SetTrainData(Mat<double> samples, Mat<double> responses);
 	void SetStudyRate(double scale = 0.1);
@@ -180,11 +183,13 @@ public:
 	void Predict(Mat<double>& sample,Mat<double>& response);
 	void Save(string path);
 	void Load(string path);
+	string ToString();
 private:
 	void init_weights();
 	void forward();
 	void backward(int &idx);
 	void normalize();
+	void SetLayers(Mat<int> layers, bool init_weight);
 	Mat<double> samples;
 	Mat<double> responses;
 	Mat<double> min_and_max;
@@ -192,6 +197,7 @@ private:
 	Mat<double> outputs;
 	vector<Mat<double>> delta_weights;
 
+	bool trained;
 	double theta;
 	double eta;
 	double max_iter;

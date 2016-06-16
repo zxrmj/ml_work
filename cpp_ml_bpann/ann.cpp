@@ -59,7 +59,7 @@ void read(Mat<double>& td,Mat<double>& rs, vector<Mat<double>>&tt, vector<Mat<do
 			idx++;
 		}
 	}
-	/// 读入一些测试数据
+	// 读入一些测试数据
 	for (int c = 0; c < CLASS_NUM; c++)
 	{
 		for (int i = SMP_EVERY*(c + k); i < SMP_EVERY*(c + 1); i++)
@@ -87,8 +87,12 @@ void read(Mat<double>& td,Mat<double>& rs, vector<Mat<double>>&tt, vector<Mat<do
 
 int main()
 {
+	SetConsoleTitleA(LPCSTR("机器学习课程设计:反向传播人工神经网络"));
+	system("color 3F");
 	shared_ptr<ANN> Network = make_shared<ANN>();
-	Network->SetLayers(Mat<int>{4,12,12, 3});
+	Network->SetLayers(Mat<int>{4, 12, 3});
+	Network->SetStudyRate(0.2);
+	Network->SetThreshold(1.5);
 	Mat<double> traindata;
 	Mat<double>	result; 
 	vector<Mat<double>> test;
@@ -96,6 +100,9 @@ int main()
 	read(traindata, result, test,test_results);
 	Network->SetTrainData(traindata, result);
 	Network->Train();
+	cout << Network->ToString() << endl;
+	cout << "按任意键开始测试" << endl;
+	system("pause");
 	int success = 0;
 	function<int(Mat<double>)> max_idx = 
 		[](Mat<double> &mat) -> int 
@@ -117,21 +124,24 @@ int main()
 		Mat<double> td = test[i];
 		Mat<double> rlt;
 		Network->Predict(td, rlt);
-		/*cout << "样本 " << i+1 << endl;
+		cout << "-------样本 " << i+1 << "-------" << endl;
+		cout << "特征向量" << td << endl;
 		cout << "预测结果" << rlt <<  "\t真实结果" << test_results[i] << endl;
 		if (max_idx(rlt) == max_idx(test_results[i]))
 		{
 			success++;
-			cout << "预测成功！" << endl;
+			cout << "-------预测成功！-------\n\n" << endl;
 		}
 		else
 		{
-			cout << "预测失败。" << endl;
+			cout << "-------预测失败。-------\n\n" << endl;
 		}
-		system("pause");*/
 	}
 	cout << "成功率:" << success * 100.0/test.size() << "%"  << endl;
 	Network->Save("test.xml");
+	shared_ptr<ANN> Network2 = make_shared<ANN>();
+	Network2->Load("test.xml");
+	Network2->Save("test2.xml");
 	system("pause");
 }
 
@@ -139,16 +149,12 @@ ANN::ANN()
 {
 	theta = 1.0;
 	eta = 0.1;
-	max_iter = 5000;
-	max_error = 0.000001;
+	max_iter = 10000;
+	max_error = 0.01;
 }
 
-ANN::~ANN()
-{
-	
-}
 
-void ANN::SetLayers(Mat<int> layers)
+void ANN::SetLayers(Mat<int> layers,bool init_weight)
 {
 	assert(layers.rows == 1 && layers.cols > 2);
 	function<int(void)> findmax = [&layers]() -> int {
@@ -173,10 +179,27 @@ void ANN::SetLayers(Mat<int> layers)
 		weights.push_back(w);
 		delta_weights.push_back(dw);
 	}
-
-	init_weights();
+	if (init_weight)
+	{
+		init_weights();
+	}
+	trained = false;
 }
 
+/// <summary>
+/// 设置神经网络结构
+/// </summary>
+/// <param name="layers">层数信息，维度为层数的向量，每个元素值为对应层数单元数</param>
+void ANN::SetLayers(Mat<int> layers)
+{
+	SetLayers(layers, true);
+}
+
+/// <summary>
+/// 设置训练数据
+/// </summary>
+/// <param name="samples">样本矩阵，矩阵每一行应为一个样本向量</param>
+/// <param name="responses">样本的期望结果</param>
 void ANN::SetTrainData(Mat<double> samples, Mat<double> responses)
 {
 	assert(samples.rows == responses.rows);
@@ -185,29 +208,51 @@ void ANN::SetTrainData(Mat<double> samples, Mat<double> responses)
 	normalize();
 }
 
-void ANN::SetStudyRate(double scale)
+/// <summary>
+/// 设置学习速率
+/// </summary>
+/// <param name="scale">学习速率</param>
+void ANN::SetStudyRate(double rate)
 {
-	this->eta = scale;
+	this->eta = rate;
 }
 
+/// <summary>
+/// 设置阈值
+/// </summary>
+/// <param name="threshold">阈值</param>
 void ANN::SetThreshold(double threshold)
 {
 	this->theta = threshold;
 }
 
+/// <summary>
+/// 设置终止迭代次数
+/// </summary>
+/// <param name="iterations">迭代次数</param>
 void ANN::SetTermIterations(int iterations)
 {
 	this->max_iter = iterations;
 }
 
+/// <summary>
+/// 设置终止错误率
+/// </summary>
+/// <param name="error">错误率</param>
 void ANN::SetTermErrorRate(double error)
 {
 	this->max_error = error;
 }
 
+/// <summary>
+/// 训练神经网络
+/// </summary>
 void ANN::Train()
 {
-	for (int t = 0; t < max_iter; t++)
+	cout << "训练中:\n" << "最大迭代次数:" << max_iter << endl;
+	boost::progress_timer pt;
+	boost::progress_display pd(max_iter);
+	for (int t = 0; t < max_iter; t++, ++pd)
 	{
 		double error = 0.0;
 		for (int i = 0; i < samples.rows; i++)
@@ -227,18 +272,22 @@ void ANN::Train()
 		error /= 2;
 		if (error < max_error)
 		{
-			cout << t << endl;
-			
+			cout << "迭代次数:" << t << endl;
+			cout << "用时:";
+			trained = true;
 			return;
 		}
-		/*
-		if (t % 5000 == 0)
-		{
-			cout << "迭代次数:" << t << "\t错误率:" << error << endl;
-		}*/
 	}
+	cout << "迭代次数:" << max_iter << endl;
+	cout << "用时:";
+	trained = true;
 }
 
+/// <summary>
+/// 预测
+/// </summary>
+/// <param name="sample">测试样本，应为维度与输入层单元数相等的向量</param>
+/// <param name="response">响应值，返回维度与输出层单元数相等的向量</param>
 void ANN::Predict(Mat<double>& sample, Mat<double>& response)
 {
 	assert(sample.cols <= outputs.cols);
@@ -268,18 +317,25 @@ void ANN::Predict(Mat<double>& sample, Mat<double>& response)
 	}
 }
 
+/// <summary>
+/// 保存神经网络
+/// </summary>
+/// <param name="path">文件路径</param>
 void ANN::Save(string path)
 {
-	ptree net, config, layer, weights_value;
+	// 使用优先级树建立XML文档结构
+	ptree net, config, layer, weights_value, min_max_value;
+	config.add("<xmlcomment>", "Network Configuration");
 	config.add("theta", theta);
 	config.add("eta", eta);
 	config.add("max_iter", max_iter);
 	config.add("max_error", max_error);
 	layer.add("layer_num", weights.size());
-	for (int l = 1; l < weights.size(); l++)
+	for (int l = 0; l < weights.size(); l++)
 	{
 		layer.add("unit_num.value", weights[l].rows);
 		ptree mat_value;
+		
 		for (int i = 0; i < weights[l].rows; i++)
 		{
 			ptree row;
@@ -289,26 +345,40 @@ void ANN::Save(string path)
 			}
 			mat_value.add_child("unit", row);
 		}
+		mat_value.add("<xmlcomment>", "This is No." + to_string(l+1) + " Layer of Network.");
 		weights_value.add_child("layer", mat_value);
+	}
+	for (int i = 0; i < min_and_max.cols; i++)
+	{
+		min_max_value.add("min.value", min_and_max.at(i, 0));
+		min_max_value.add("max.value", min_and_max.at(i, 1));
 	}
 	net.add_child("network.config", config);
 	net.add_child("network.layer_info", layer);
 	net.add_child("network.weights", weights_value);
+	net.add_child("network.min_max", min_max_value);
 	write_xml(path, net);
 }
 
+/// <summary>
+/// 加载神经网络
+/// </summary>
+/// <param name="path">文件路径</param>
 void ANN::Load(string path)
 {
-	ptree net, config, layer, weights_value;
+	// 读取XML文档
+	ptree net, config, layer, weights_value, min_max_value;
 	if (_access(path.c_str(), 0) == -1)
 	{
 		cerr << "配置文件不存在" << endl;
 		return;
 	}
 	read_xml(path, net);
-	net.get_child("network.config", config);
-	net.get_child("network.layer_info", layer);
-	net.get_child("network.weights", weights_value);
+	config = net.get_child("network.config");
+	layer = net.get_child("network.layer_info");
+	weights_value = net.get_child("network.weights");
+	min_max_value = net.get_child("network.min_max");
+
 	// 获取配置
 	this->theta = config.get_child("theta").get_value<double>();
 	this->eta = config.get_child("eta").get_value<double>();
@@ -325,23 +395,54 @@ void ANN::Load(string path)
 		m_lyr[i++] = iter->second.get_value<int>();
 	}
 	// 加载网络层
-	this->SetLayers(m_lyr);
+	this->SetLayers(m_lyr, false);
 	// 加载权值
-	int l = 1;
+	int l = 0, j = 0;
+
 	for (auto lyr = weights_value.begin(); lyr != weights_value.end(); lyr++)
 	{
+		if (lyr->first != "layer")
+			continue;
 		i = 0;
-		for (auto unit = lyr->second.begin(); unit != lyr->second.end(); unit++)
+		for (auto unit = lyr->second.begin(); unit != lyr->second.end(); unit++, i++)
 		{
-			int j = 0;
-			for (auto wt = unit->second.begin(); wt != unit->second.end(); wt++)
+			j = 0;
+			for (auto wt = unit->second.begin(); wt != unit->second.end(); wt++,j++)
 			{
 				weights[l].at(j,i) = wt->second.get_value<double>();
 			}
 		}
+		l++;
+	}
+	// 获取最大最小值
+	min_and_max = Mat<double>(2, weights[0].rows);
+	auto min_val = min_max_value.get_child("min");
+	auto max_val = min_max_value.get_child("max");
+	auto min_iter = min_val.begin();
+	auto max_iter = max_val.begin();
+	for (i = 0; i < min_and_max.cols; i++)
+	{
+		min_and_max.at(i, 0) = min_iter++->second.get_value<double>();
+		min_and_max.at(i, 1) = max_iter++->second.get_value<double>();
 	}
 }
 
+/// <summary>
+/// 返回包含神经网络参数的字符串
+/// </summary>
+string ANN::ToString()
+{
+	return
+		typeid(this).name()+ string() + ":\n"
+		"\tStudy Rate:\t\t" + to_string(eta) + "\n"
+		"\tThreshold:\t\t" + to_string(theta) + "\n"
+		"\tMax Iteration Times:\t" + to_string(max_iter) + "\n"
+		"\tMax Error Rate:\t\t" + to_string(max_error) + "\n"
+		"\tTrain Method:\t\tBackPropagation Algorithm.\n"
+		"\tIs Trained:\t\t" + (trained ? "True" : "False");
+}
+
+/* 初始化权重 */
 void ANN::init_weights()
 {
 	mt19937 gen;
@@ -359,6 +460,7 @@ void ANN::init_weights()
 	}
 }
 
+/* 前向传递 */
 void ANN::forward()
 {
 	for (int i = 1; i < outputs.rows; i++)
@@ -378,6 +480,7 @@ void ANN::forward()
 	}
 }
 
+/* 反向传播 */
 void ANN::backward(int &idx)
 {
 	// 输出层反向传播
@@ -417,8 +520,10 @@ void ANN::backward(int &idx)
 	}
 }
 
+/* 归一化训练样本数据 */
 void ANN::normalize()
 {
+
 	min_and_max = Mat<double>(2, samples.cols);
 	for (int i = 0; i < samples.cols; i++)
 	{
@@ -437,6 +542,7 @@ void ANN::normalize()
 
 		}
 	}
+	// 对训练数据归一化处理
 	for (int i = 0; i < samples.rows; i++)
 	{
 		for (int j = 0; j < samples.cols; j++)
