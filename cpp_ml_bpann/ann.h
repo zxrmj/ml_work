@@ -9,9 +9,11 @@
 #include <random>
 #include <functional>
 #include <initializer_list>
+#include <thread>a
 #include <memory>
 #include <regex>
 #include <io.h>
+#include <numeric>
 #include <Windows.h>
 #include <boost\property_tree\ptree.hpp>
 #include <boost\property_tree\xml_parser.hpp>
@@ -19,7 +21,7 @@
 using namespace boost::property_tree;
 using namespace std;
 
-/*管理矩阵类内存*/
+/* 管理矩阵类数据内存 */
 template<class _Ty>
 class Pointer
 {
@@ -43,7 +45,7 @@ inline Pointer<_Ty>::~Pointer()
 }
 
 
-/*存储数据的矩阵*/
+/* 矩阵类，用于存储数据 */
 template<class _Ty>
 class Mat
 {
@@ -81,12 +83,15 @@ inline ostream& operator << (ostream &os, Mat<_Tn> &m)
 	os << "]";
 	return os;
 }
+
 template<class _Ty>
 inline Mat<_Ty>::Mat() :Mat(0, 0)
 {
+
 }
 
 template<class _Ty>
+
 inline Mat<_Ty>::Mat(size_t rows, size_t cols)
 {
 	this->rows = rows;
@@ -95,6 +100,7 @@ inline Mat<_Ty>::Mat(size_t rows, size_t cols)
 	
 }
 template<class _Ty>
+
 inline Mat<_Ty>::Mat(initializer_list<_Ty> lst)
 {
 	this->cols = lst.size();
@@ -104,6 +110,7 @@ inline Mat<_Ty>::Mat(initializer_list<_Ty> lst)
 		*(ptr->_base + i) = *(lst.begin() + i);
 }
 template<class _Ty>
+
 inline Mat<_Ty>::~Mat()
 {
 }
@@ -135,31 +142,37 @@ inline bool Mat<_Ty>::operator==(Mat<_Ty>& mat)
 		return true;
 	}
 }
+
 template<class _Ty>
 inline bool Mat<_Ty>::operator!=(Mat<_Ty>& mat)
 {
 	return !(this == mat);
 }
+
 template<class _Ty>
 inline _Ty & Mat<_Ty>::at(size_t x, size_t y)
 {
 	return *(ptr->_base + y*cols + x);
 }
+
 template<class _Ty>
 inline _Ty & Mat<_Ty>::operator[](int i)
 {
 	return this->at(i);
 }
+
 template<class _Ty>
 inline _Ty * Mat<_Ty>::begin()
 {
 	return this->ptr->_base;
 }
+
 template<class _Ty>
 inline _Ty * Mat<_Ty>::end()
 {
 	return this->ptr->_base + rows*cols;
 }
+
 template<class _Ty>
 inline void Mat<_Ty>::fill(const _Ty &val)
 {
@@ -174,6 +187,7 @@ public:
 	ANN();
 	~ANN() = default;
 	void SetLayers(Mat<int> layers);
+	void SetLayers(initializer_list<int> init_list);
 	void SetTrainData(Mat<double> samples, Mat<double> responses);
 	void SetStudyRate(double scale = 0.1);
 	void SetThreshold(double threshold = 1.0);
@@ -190,6 +204,7 @@ private:
 	void backward(int &idx);
 	void normalize();
 	void SetLayers(Mat<int> layers, bool init_weight);
+
 	Mat<double> samples;
 	Mat<double> responses;
 	Mat<double> min_and_max;

@@ -80,7 +80,6 @@ void read(Mat<double>& td,Mat<double>& rs, vector<Mat<double>>&tt, vector<Mat<do
 			trs.push_back(rm);
 		}
 	}
-
 }
 
 
@@ -90,14 +89,16 @@ int main()
 	SetConsoleTitleA(LPCSTR("机器学习课程设计:反向传播人工神经网络"));
 	system("color 3F");
 	shared_ptr<ANN> Network = make_shared<ANN>();
-	Network->SetLayers(Mat<int>{4, 12, 3});
+	Network->SetLayers({ 4,6,6,3 });
 	Network->SetStudyRate(0.2);
 	Network->SetThreshold(1.5);
+	Network->SetTermIterations(10000);
 	Mat<double> traindata;
 	Mat<double>	result; 
 	vector<Mat<double>> test;
 	vector <Mat<double>> test_results;
 	read(traindata, result, test,test_results);
+	cout << "读取训练集成功" << endl;
 	Network->SetTrainData(traindata, result);
 	Network->Train();
 	cout << Network->ToString() << endl;
@@ -195,6 +196,13 @@ void ANN::SetLayers(Mat<int> layers)
 	SetLayers(layers, true);
 }
 
+void ANN::SetLayers(initializer_list<int> init_list)
+{
+	return SetLayers(Mat<int>(init_list));
+}
+
+
+
 /// <summary>
 /// 设置训练数据
 /// </summary>
@@ -249,7 +257,7 @@ void ANN::SetTermErrorRate(double error)
 /// </summary>
 void ANN::Train()
 {
-	cout << "训练中:\n" << "最大迭代次数:" << max_iter << endl;
+	cout << "训练中:";
 	boost::progress_timer pt;
 	boost::progress_display pd(max_iter);
 	for (int t = 0; t < max_iter; t++, ++pd)
@@ -321,6 +329,7 @@ void ANN::Predict(Mat<double>& sample, Mat<double>& response)
 /// 保存神经网络
 /// </summary>
 /// <param name="path">文件路径</param>
+/// <seealso cref="ANN:Load"/>
 void ANN::Save(string path)
 {
 	// 使用优先级树建立XML文档结构
@@ -430,16 +439,24 @@ void ANN::Load(string path)
 /// <summary>
 /// 返回包含神经网络参数的字符串
 /// </summary>
+/// <returns>学习速率、阈值、最大迭代次数与最大错误率以及网络结构信息</returns>
 string ANN::ToString()
 {
 	return
-		typeid(this).name()+ string() + ":\n"
+		"Artificial Neural Network Configuration:\n"
 		"\tStudy Rate:\t\t" + to_string(eta) + "\n"
 		"\tThreshold:\t\t" + to_string(theta) + "\n"
 		"\tMax Iteration Times:\t" + to_string(max_iter) + "\n"
 		"\tMax Error Rate:\t\t" + to_string(max_error) + "\n"
 		"\tTrain Method:\t\tBackPropagation Algorithm.\n"
-		"\tIs Trained:\t\t" + (trained ? "True" : "False");
+		"\tIs Trained:\t\t" + string(trained ? "True" : "False") + "\n"
+		"\nLayers Infomation:\n\tLayers Number:\t" + to_string(weights.size()) + "\n"
+		"\tUnits Count:\t" + to_string(accumulate(weights.begin(), weights.end(), 0, [](int& i, const Mat<double>& mat) ->int { return i + mat.rows; })) + "\n"
+		"\tDetails:\n"
+		"\t\tInput Layer:\t" + to_string(weights.front().rows) + "\n" +
+		"\t\tHidden Layer:\t" + accumulate(weights.begin() + 1, weights.end() - 1, string(), [](string &s, const Mat<double>&mat) ->string { return s + to_string(mat.rows) + ","; }) + "\n"
+		"\t\tOutput Layer:\t" + to_string(weights.back().rows) + "\n";
+
 }
 
 /* 初始化权重 */
