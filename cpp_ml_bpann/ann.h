@@ -9,7 +9,7 @@
 #include <random>
 #include <functional>
 #include <initializer_list>
-#include <thread>a
+#include <thread>
 #include <memory>
 #include <regex>
 #include <io.h>
@@ -18,6 +18,7 @@
 #include <boost\property_tree\ptree.hpp>
 #include <boost\property_tree\xml_parser.hpp>
 #include <boost\progress.hpp>
+#include <boost\algorithm\string.hpp>
 using namespace boost::property_tree;
 using namespace std;
 
@@ -39,9 +40,8 @@ inline Pointer<_Ty>::Pointer()
 template<class _Ty>
 inline Pointer<_Ty>::~Pointer()
 {
-	if (_base == nullptr)
-		return;
-	delete[] _base;
+	if (_base != nullptr)
+		delete[] _base;
 }
 
 
@@ -193,17 +193,22 @@ public:
 	void SetThreshold(double threshold = 1.0);
 	void SetTermIterations(int iterations = 5000);
 	void SetTermErrorRate(double error = 0.01);
+	double GetStudyRate();
+	double GetThreshold();
+	double GetTermIterations();
+	double GetTermErrorRate();
 	void Train();
 	void Predict(Mat<double>& sample,Mat<double>& response);
 	void Save(string path);
 	void Load(string path);
 	string ToString();
+	size_t GetHashCode();
 private:
 	void init_weights();
 	void forward();
 	void backward(int &idx);
 	void normalize();
-	void SetLayers(Mat<int> layers, bool init_weight);
+	void create_net(Mat<int> layers, bool init_weight);
 
 	Mat<double> samples;
 	Mat<double> responses;

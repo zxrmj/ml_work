@@ -7,26 +7,6 @@ enum Config
 	SMP_TOTAL = 150
 };
 
-void split(string &str, vector<string> &strv)
-{
-	string::iterator bg, ed;
-	bg = ed = str.begin();
-	for_each(str.begin(), str.end(),
-		[&bg, &ed, &strv](const auto& a)
-	{
-		if (*ed == ',')
-		{
-			strv.push_back(string(bg, ed));
-			bg = ++ed;
-		}
-		else
-		{
-			++ed;
-		}
-	});
-	strv.push_back(string(bg, str.end()));
-}
-
 void read(Mat<double>& td,Mat<double>& rs, vector<Mat<double>>&tt, vector<Mat<double>>& trs)
 {
 	ifstream fs;
@@ -48,7 +28,7 @@ void read(Mat<double>& td,Mat<double>& rs, vector<Mat<double>>&tt, vector<Mat<do
 		for (int i = SMP_EVERY*c; i < SMP_EVERY*(c + k); i++)
 		{
 			vector<string> tmp;
-			split(strv[i], tmp);
+			boost::split(tmp, strv[i], boost::is_any_of(","));
 			int j = 0;
 			for (; j < FEATNUM; j++)
 			{
@@ -65,7 +45,7 @@ void read(Mat<double>& td,Mat<double>& rs, vector<Mat<double>>&tt, vector<Mat<do
 		for (int i = SMP_EVERY*(c + k); i < SMP_EVERY*(c + 1); i++)
 		{
 			vector<string> tmp;
-			split(strv[i], tmp);
+			boost::split(tmp, strv[i], boost::is_any_of(","));
 			int j = 0;
 			Mat<double> tm(1, FEATNUM);
 			Mat<double> rm(1, CLASS_NUM);
@@ -100,6 +80,7 @@ int main()
 	read(traindata, result, test,test_results);
 	cout << "读取训练集成功" << endl;
 	Network->SetTrainData(traindata, result);
+	cout << "训练第一个神经网络" << endl;
 	Network->Train();
 	cout << Network->ToString() << endl;
 	cout << "按任意键开始测试" << endl;
@@ -126,8 +107,8 @@ int main()
 		Mat<double> rlt;
 		Network->Predict(td, rlt);
 		cout << "-------样本 " << i+1 << "-------" << endl;
-		cout << "特征向量" << td << endl;
-		cout << "预测结果" << rlt <<  "\t真实结果" << test_results[i] << endl;
+		cout << "特征向量:\t" << td << endl;
+		cout << "预测结果:\t" << rlt <<  "\t真实结果" << test_results[i] << endl;
 		if (max_idx(rlt) == max_idx(test_results[i]))
 		{
 			success++;
@@ -139,10 +120,34 @@ int main()
 		}
 	}
 	cout << "成功率:" << success * 100.0/test.size() << "%"  << endl;
-	Network->Save("test.xml");
+	Network->Save("net1.xml");
 	shared_ptr<ANN> Network2 = make_shared<ANN>();
-	Network2->Load("test.xml");
-	Network2->Save("test2.xml");
+	Network2->Load("net1.xml");
+	// 使用第二个网络进行测试
+	cout << "按下任意键使用第二个网络进行测试" << endl;
+	system("pause");
+
+	success = 0;
+	for (int i = 0; i < test.size(); i++)
+	{
+		Mat<double> td = test[i];
+		Mat<double> rlt;
+		Network2->Predict(td, rlt);
+		cout << "-------样本 " << i + 1 << "-------" << endl;
+		cout << "特征向量:\t" << td << endl;
+		cout << "预测结果:\t" << rlt << "\t真实结果" << test_results[i] << endl;
+		if (max_idx(rlt) == max_idx(test_results[i]))
+		{
+			success++;
+			cout << "-------预测成功！-------\n\n" << endl;
+		}
+		else
+		{
+			cout << "-------预测失败。-------\n\n" << endl;
+		}
+	}
+	cout << "成功率:" << success * 100.0 / test.size() << "%" << endl;
+	Network2->Save("net2.xml");
 	system("pause");
 }
 
@@ -155,7 +160,7 @@ ANN::ANN()
 }
 
 
-void ANN::SetLayers(Mat<int> layers,bool init_weight)
+void ANN::create_net(Mat<int> layers,bool init_weight)
 {
 	assert(layers.rows == 1 && layers.cols > 2);
 	function<int(void)> findmax = [&layers]() -> int {
@@ -193,15 +198,49 @@ void ANN::SetLayers(Mat<int> layers,bool init_weight)
 /// <param name="layers">层数信息，维度为层数的向量，每个元素值为对应层数单元数</param>
 void ANN::SetLayers(Mat<int> layers)
 {
-	SetLayers(layers, true);
+	create_net(layers, true);
 }
 
+/// <summary>
+/// 设置神经网络结构
+/// </summary>
+/// <param name="layers">层数信息，维度为层数的向量，每个元素值为对应层数单元数</param>
 void ANN::SetLayers(initializer_list<int> init_list)
 {
 	return SetLayers(Mat<int>(init_list));
 }
 
+/// <summary>
+/// 获取学习速率
+/// </summary>
+double ANN::GetStudyRate()
+{
+	return this->eta;
+}
 
+/// <summary>
+/// 获取阈值
+/// </summary>
+double ANN::GetThreshold()
+{
+	return this->theta;
+}
+
+/// <summary>
+/// 获取终止迭代次数
+/// </summary>
+double ANN::GetTermIterations()
+{
+	return this->max_iter;
+}
+
+/// <summary>
+/// 获取终止迭代最大错误率
+/// </summary>
+double ANN::GetTermErrorRate()
+{
+	return this->max_error;
+}
 
 /// <summary>
 /// 设置训练数据
@@ -404,7 +443,7 @@ void ANN::Load(string path)
 		m_lyr[i++] = iter->second.get_value<int>();
 	}
 	// 加载网络层
-	this->SetLayers(m_lyr, false);
+	this->create_net(m_lyr, false);
 	// 加载权值
 	int l = 0, j = 0;
 
@@ -416,7 +455,7 @@ void ANN::Load(string path)
 		for (auto unit = lyr->second.begin(); unit != lyr->second.end(); unit++, i++)
 		{
 			j = 0;
-			for (auto wt = unit->second.begin(); wt != unit->second.end(); wt++,j++)
+			for (auto wt = unit->second.begin(); wt != unit->second.end(); wt++, j++)
 			{
 				weights[l].at(j,i) = wt->second.get_value<double>();
 			}
@@ -459,11 +498,19 @@ string ANN::ToString()
 
 }
 
+/// <summary>
+/// 返回神经网络的哈希码
+/// </summary>
+size_t ANN::GetHashCode()
+{
+	return typeid(this).hash_code();
+}
+
 /* 初始化权重 */
 void ANN::init_weights()
 {
 	mt19937 gen;
-	uniform_real_distribution<> urd(0,0.1);
+	uniform_real_distribution<> urd(0, 0.1);
 	_Binder<_Unforced, uniform_real_distribution<>&, mt19937&> random = bind(urd, gen);
 	for (size_t l = 1; l < weights.size(); l++)
 	{
@@ -471,7 +518,7 @@ void ANN::init_weights()
 		{
 			for (size_t j = 0; j < weights[l].cols; j++)
 			{
-				weights[l].at(j, i) = random();
+				weights[l].at(j, i) = random(); 
 			}
 		}
 	}
@@ -505,10 +552,10 @@ void ANN::backward(int &idx)
 	for (int j = 0; j < weights[output_layer].rows; j++)
 	{
 		double &result_j = outputs.at(j, output_layer);
-		double delta_weight = (responses.at(j,idx) - result_j) * result_j *(1 - outputs.at(j, output_layer));
+		double delta_weight = (responses.at(j, idx) - result_j) * result_j *(1 - outputs.at(j, output_layer)) *eta;
 		for (int k = 0; k < weights[output_layer].cols; k++)
 		{
-			double d = eta * delta_weight * outputs.at(k, output_layer - 1);
+			double d = delta_weight * outputs.at(k, output_layer - 1);
 			weights[output_layer].at(k, j) += d;
 			delta_weights[output_layer].at(k, j) = d;
 		}
@@ -523,13 +570,14 @@ void ANN::backward(int &idx)
 			// 下游
 			for (int k = 0; k < weights[i + 1].rows; k++)
 			{
+				// 下游单元权值更新中，所有与本单元相关的更新值之和
 				sum += delta_weights[i + 1].at(j, k) * weights[i + 1].at(j, k); //下游所有有关权值更新
 			}
 			double &result = outputs.at(j, i);
-			double delta_weight = (1 - result)* result*sum;
+			double delta_weight = eta * (1 - result)* result*sum;
 			for (int k = 0; k < weights[i].cols; k++)
 			{
-				double d = eta * delta_weight * outputs.at(k, i - 1);
+				double d = delta_weight * outputs.at(k, i - 1);
 				weights[i].at(k, j) += d;
 				delta_weights[i].at(k, j) = d;
 			}
@@ -540,10 +588,12 @@ void ANN::backward(int &idx)
 /* 归一化训练样本数据 */
 void ANN::normalize()
 {
-
+	
+	// 设置矩阵为2行，列数与特征数相同
 	min_and_max = Mat<double>(2, samples.cols);
 	for (int i = 0; i < samples.cols; i++)
 	{
+		// 初始化
 		min_and_max.at(i, 0) = FLT_MAX;
 		min_and_max.at(i, 1) = FLT_MIN;
 	}
