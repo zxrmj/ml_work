@@ -181,14 +181,14 @@ inline void Mat<_Ty>::fill(const _Ty &val)
 // 矩阵类结束
 
 // 网络类开始
-class ANN
+class MLP
 {
 public:
-	ANN();
-	~ANN() = default;
+	MLP();
+	~MLP() = default;
 	void SetLayers(Mat<int> layers);
 	void SetLayers(initializer_list<int> init_list);
-	void SetTrainData(Mat<double> samples, Mat<double> responses);
+	void SetTrainData(Mat<double> samples, Mat<double> labels);
 	void SetStudyRate(double scale = 0.1);
 	void SetThreshold(double threshold = 1.0);
 	void SetTermIterations(int iterations = 5000);

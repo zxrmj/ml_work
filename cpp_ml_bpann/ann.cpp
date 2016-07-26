@@ -68,8 +68,8 @@ int main()
 {
 	SetConsoleTitleA(LPCSTR("机器学习课程设计:反向传播人工神经网络"));
 	system("color 3F");
-	shared_ptr<ANN> Network = make_shared<ANN>();
-	Network->SetLayers({ 4,6,6,3 });
+	shared_ptr<MLP> Network = make_shared<MLP>();
+	Network->SetLayers({ 4,12,12,3 });
 	Network->SetStudyRate(0.2);
 	Network->SetThreshold(1.5);
 	Network->SetTermIterations(10000);
@@ -121,7 +121,7 @@ int main()
 	}
 	cout << "成功率:" << success * 100.0/test.size() << "%"  << endl;
 	Network->Save("net1.xml");
-	shared_ptr<ANN> Network2 = make_shared<ANN>();
+	shared_ptr<MLP> Network2 = make_shared<MLP>();
 	Network2->Load("net1.xml");
 	// 使用第二个网络进行测试
 	cout << "按下任意键使用第二个网络进行测试" << endl;
@@ -151,7 +151,7 @@ int main()
 	system("pause");
 }
 
-ANN::ANN()
+MLP::MLP()
 {
 	theta = 1.0;
 	eta = 0.1;
@@ -160,7 +160,7 @@ ANN::ANN()
 }
 
 
-void ANN::create_net(Mat<int> layers,bool init_weight)
+void MLP::create_net(Mat<int> layers,bool init_weight)
 {
 	assert(layers.rows == 1 && layers.cols > 2);
 	function<int(void)> findmax = [&layers]() -> int {
@@ -196,7 +196,7 @@ void ANN::create_net(Mat<int> layers,bool init_weight)
 /// 设置神经网络结构
 /// </summary>
 /// <param name="layers">层数信息，维度为层数的向量，每个元素值为对应层数单元数</param>
-void ANN::SetLayers(Mat<int> layers)
+void MLP::SetLayers(Mat<int> layers)
 {
 	create_net(layers, true);
 }
@@ -205,7 +205,7 @@ void ANN::SetLayers(Mat<int> layers)
 /// 设置神经网络结构
 /// </summary>
 /// <param name="layers">层数信息，维度为层数的向量，每个元素值为对应层数单元数</param>
-void ANN::SetLayers(initializer_list<int> init_list)
+void MLP::SetLayers(initializer_list<int> init_list)
 {
 	return SetLayers(Mat<int>(init_list));
 }
@@ -213,7 +213,7 @@ void ANN::SetLayers(initializer_list<int> init_list)
 /// <summary>
 /// 获取学习速率
 /// </summary>
-double ANN::GetStudyRate()
+double MLP::GetStudyRate()
 {
 	return this->eta;
 }
@@ -221,7 +221,7 @@ double ANN::GetStudyRate()
 /// <summary>
 /// 获取阈值
 /// </summary>
-double ANN::GetThreshold()
+double MLP::GetThreshold()
 {
 	return this->theta;
 }
@@ -229,7 +229,7 @@ double ANN::GetThreshold()
 /// <summary>
 /// 获取终止迭代次数
 /// </summary>
-double ANN::GetTermIterations()
+double MLP::GetTermIterations()
 {
 	return this->max_iter;
 }
@@ -237,7 +237,7 @@ double ANN::GetTermIterations()
 /// <summary>
 /// 获取终止迭代最大错误率
 /// </summary>
-double ANN::GetTermErrorRate()
+double MLP::GetTermErrorRate()
 {
 	return this->max_error;
 }
@@ -247,7 +247,7 @@ double ANN::GetTermErrorRate()
 /// </summary>
 /// <param name="samples">样本矩阵，矩阵每一行应为一个样本向量</param>
 /// <param name="responses">样本的期望结果</param>
-void ANN::SetTrainData(Mat<double> samples, Mat<double> responses)
+void MLP::SetTrainData(Mat<double> samples, Mat<double> responses)
 {
 	assert(samples.rows == responses.rows);
 	this->samples = samples;
@@ -259,7 +259,7 @@ void ANN::SetTrainData(Mat<double> samples, Mat<double> responses)
 /// 设置学习速率
 /// </summary>
 /// <param name="scale">学习速率</param>
-void ANN::SetStudyRate(double rate)
+void MLP::SetStudyRate(double rate)
 {
 	this->eta = rate;
 }
@@ -268,7 +268,7 @@ void ANN::SetStudyRate(double rate)
 /// 设置阈值
 /// </summary>
 /// <param name="threshold">阈值</param>
-void ANN::SetThreshold(double threshold)
+void MLP::SetThreshold(double threshold)
 {
 	this->theta = threshold;
 }
@@ -277,7 +277,7 @@ void ANN::SetThreshold(double threshold)
 /// 设置终止迭代次数
 /// </summary>
 /// <param name="iterations">迭代次数</param>
-void ANN::SetTermIterations(int iterations)
+void MLP::SetTermIterations(int iterations)
 {
 	this->max_iter = iterations;
 }
@@ -286,7 +286,7 @@ void ANN::SetTermIterations(int iterations)
 /// 设置终止错误率
 /// </summary>
 /// <param name="error">错误率</param>
-void ANN::SetTermErrorRate(double error)
+void MLP::SetTermErrorRate(double error)
 {
 	this->max_error = error;
 }
@@ -294,7 +294,7 @@ void ANN::SetTermErrorRate(double error)
 /// <summary>
 /// 训练神经网络
 /// </summary>
-void ANN::Train()
+void MLP::Train()
 {
 	cout << "训练中:";
 	boost::progress_timer pt;
@@ -335,7 +335,7 @@ void ANN::Train()
 /// </summary>
 /// <param name="sample">测试样本，应为维度与输入层单元数相等的向量</param>
 /// <param name="response">响应值，返回维度与输出层单元数相等的向量</param>
-void ANN::Predict(Mat<double>& sample, Mat<double>& response)
+void MLP::Predict(Mat<double>& sample, Mat<double>& response)
 {
 	assert(sample.cols <= outputs.cols);
 	for (size_t j = 0; j < sample.cols; j++)
@@ -369,7 +369,7 @@ void ANN::Predict(Mat<double>& sample, Mat<double>& response)
 /// </summary>
 /// <param name="path">文件路径</param>
 /// <seealso cref="ANN:Load"/>
-void ANN::Save(string path)
+void MLP::Save(string path)
 {
 	// 使用优先级树建立XML文档结构
 	ptree net, config, layer, weights_value, min_max_value;
@@ -412,7 +412,7 @@ void ANN::Save(string path)
 /// 加载神经网络
 /// </summary>
 /// <param name="path">文件路径</param>
-void ANN::Load(string path)
+void MLP::Load(string path)
 {
 	// 读取XML文档
 	ptree net, config, layer, weights_value, min_max_value;
@@ -479,7 +479,7 @@ void ANN::Load(string path)
 /// 返回包含神经网络参数的字符串
 /// </summary>
 /// <returns>学习速率、阈值、最大迭代次数与最大错误率以及网络结构信息</returns>
-string ANN::ToString()
+string MLP::ToString()
 {
 	return
 		"Artificial Neural Network Configuration:\n"
@@ -501,13 +501,13 @@ string ANN::ToString()
 /// <summary>
 /// 返回神经网络的哈希码
 /// </summary>
-size_t ANN::GetHashCode()
+size_t MLP::GetHashCode()
 {
 	return typeid(this).hash_code();
 }
 
 /* 初始化权重 */
-void ANN::init_weights()
+void MLP::init_weights()
 {
 	mt19937 gen;
 	uniform_real_distribution<> urd(0, 0.1);
@@ -525,7 +525,7 @@ void ANN::init_weights()
 }
 
 /* 前向传递 */
-void ANN::forward()
+void MLP::forward()
 {
 	for (int i = 1; i < outputs.rows; i++)
 	{
@@ -545,7 +545,7 @@ void ANN::forward()
 }
 
 /* 反向传播 */
-void ANN::backward(int &idx)
+void MLP::backward(int &idx)
 {
 	// 输出层反向传播
 	int output_layer = outputs.rows - 1;
@@ -586,7 +586,7 @@ void ANN::backward(int &idx)
 }
 
 /* 归一化训练样本数据 */
-void ANN::normalize()
+void MLP::normalize()
 {
 	
 	// 设置矩阵为2行，列数与特征数相同
